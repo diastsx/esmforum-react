@@ -40,8 +40,48 @@ function NovaPergunta(props) {
 
 function Pergunta() {
   const [listaPerguntas, setListaPerguntas] = React.useState([]);
+  const [termoBusca, setTermoBusca] = React.useState('');
+  const [buscaAplicada, setBuscaAplicada] = React.useState('');
+  const [carregando, setCarregando] = React.useState(true);
+  const [erroBusca, setErroBusca] = React.useState(false);
+
+  const carregarPerguntas = React.useCallback((termo) => {
+  const busca = termo.trim();
+  const url = busca
+    ? `http://localhost:5000/?busca=${encodeURIComponent(busca)}`
+    : 'http://localhost:5000';
+
+  setBuscaAplicada(busca);
+  setCarregando(true);
+  setErroBusca(false);
+
+  fetch(url)
+    .then(response => response.json())
+    .then(data => {
+      setListaPerguntas(data);
+      setCarregando(false);
+    })
+    .catch(() => {
+      setErroBusca(true);
+      setCarregando(false);
+    });
+}, []);
+
+  function buscarPerguntas(event) {
+    event.preventDefault();
+    carregarPerguntas(termoBusca);
+  }
+
+  function limparBusca() {
+    setTermoBusca('');
+    carregarPerguntas('');
+  }
 
   function adicionarNovaPergunta(id_pergunta, pergunta) {
+    if (buscaAplicada) {
+      carregarPerguntas(buscaAplicada);
+      return;
+    }
     setListaPerguntas((prev) => {
       const novaPergunta = {
         id_pergunta: id_pergunta,
@@ -91,21 +131,32 @@ function Pergunta() {
 
     return (
       <div>
-        <TabelaPrincipal />
+        <Form onSubmit={buscarPerguntas} className="container mb-3">
+          <Form.Group>
+            <Form.Label htmlFor="busca-perguntas">Buscar perguntas</Form.Label>
+            <Form.Control id="busca-perguntas" type="search" value={termoBusca}
+              onChange={event => setTermoBusca(event.target.value)} />
+          </Form.Group>
+          <Button type="submit" className="mt-2 me-2">Pesquisar</Button>
+          <Button type="button" variant="secondary" className="mt-2" onClick={limparBusca}>Limpar</Button>
+        </Form>
+        {carregando ? <p className="container">Carregando perguntas...</p> :
+          !erroBusca && <TabelaPrincipal />}
+        {!carregando && !erroBusca && buscaAplicada && listaPerguntas.length === 0 &&
+          <p className="container">Nenhuma pergunta encontrada para esta busca.</p>}
+        {erroBusca && <p className="container">Não foi possível carregar as perguntas.</p>}
         <NovaPergunta update={adicionarNovaPergunta}/>
       </div> 
     );
   }
     
   React.useEffect(() => {
-    fetch("http://localhost:5000")
-    .then((res) => res.json())
-    .then((data) => setListaPerguntas(data));
-  }, []);
+    carregarPerguntas('');
+  }, [carregarPerguntas]);
     
   return (
     <div className="container"> 
-      <TabelaPerguntas />
+      {TabelaPerguntas()}
     </div>
   );
 }
