@@ -156,7 +156,7 @@ function Pergunta() {
     
   return (
     <div className="container"> 
-      {TabelaPerguntas()}
+      <TabelaPerguntas />
     </div>
   );
 }
